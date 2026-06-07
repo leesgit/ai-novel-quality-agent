@@ -1,0 +1,5 @@
+# Phoenix 서버 + 적재기 venv (별도 — opentelemetry 버전이 ADK와 충돌하므로 격리)
+#   python3.11 -m venv .venv-phoenix && .venv-phoenix/bin/pip install -r requirements-phoenix.txt
+# Phoenix observability 서버 self-host + 평가 trace 적재(OTLP).
+arize-phoenix==16.5.0
+pandas==3.0.3

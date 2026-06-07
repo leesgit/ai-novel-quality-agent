@@ -1,0 +1,5 @@
+# ADK 에이전트 venv (Python 3.10+, 검증: 3.11)
+#   python3.11 -m venv .venv-adk && .venv-adk/bin/pip install -r requirements-adk.txt
+# QualityAnalyst(Gemini) + phoenix-mcp 클라이언트.
+google-adk==2.1.0
+mcp==1.27.2
