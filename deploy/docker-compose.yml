@@ -1,0 +1,49 @@
+# Hackathon demo stack — Phoenix (observability) + adk web (QualityAnalyst).
+# Memory-capped so it can't starve the production apps on the shared host.
+# Only adk-web is exposed (to 127.0.0.1:3007 → nginx). Phoenix stays internal.
+services:
+  phoenix:
+    image: arizephoenix/phoenix:version-16.5.0
+    restart: unless-stopped
+    environment:
+      - PHOENIX_WORKING_DIR=/data
+    volumes:
+      - phoenix_data:/data
+    mem_limit: 512m
+    expose:
+      - "6006"          # internal only — NOT published to the host
+    networks:
+      - demo
+
+  # One-shot: seed Phoenix with evaluations (continuity measured on real frames).
+  seeder:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.seed
+    depends_on:
+      - phoenix
+    restart: "no"
+    networks:
+      - demo
+
+  adk-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - phoenix
+    environment:
+      - PHOENIX_BASE_URL=http://phoenix:6006
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}   # injected from deploy/.env (chmod 600, never committed)
+    mem_limit: 700m
+    ports:
+      - "127.0.0.1:3007:8000"              # localhost only — nginx proxies agent.chmonst.com → here
+    networks:
+      - demo
+
+networks:
+  demo:
+
+volumes:
+  phoenix_data:

@@ -1,0 +1,18 @@
+# SECURITY: never copy secrets or local envs into the build context.
+.env
+.env.*
+!.env.example
+.venv-adk/
+.venv-phoenix/
+**/.adk/
+.phoenix_data/
+.phoenix_server.log
+.adk_web.log
+.git/
+.gitignore
+__pycache__/
+**/__pycache__/
+*.pyc
+docs/hackathon/
+.playwright-mcp/
+node_modules/

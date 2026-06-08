@@ -1,0 +1,18 @@
+# One-shot seeder — loads evaluations into Phoenix (real-frame continuity).
+# Kept separate from adk-web because arize-phoenix pulls a newer opentelemetry
+# that conflicts with google-adk; isolating them avoids the version clash.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements-phoenix.txt .
+RUN pip install --no-cache-dir -r requirements-phoenix.txt
+
+COPY adk ./adk
+COPY assets ./assets
+
+ENV PYTHONPATH=/app
+
+# Seed Phoenix, then exit. compose runs this once on startup.
+CMD ["python", "-m", "adk.phoenix_ingest", "--mock", \
+     "--project", "ai-novel-quality", "--endpoint", "http://phoenix:6006"]
