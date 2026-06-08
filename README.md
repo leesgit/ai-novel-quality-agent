@@ -5,6 +5,10 @@
 >
 > Submission for the **Google Cloud Rapid Agent Hackathon** — Arize track.
 
+**🔴 Live demo:** [agent.chmonst.com](https://agent.chmonst.com) — pick `quality_analyst`,
+then ask *"Which scene is stuck at a low score, and what should I fix first?"*
+The agent calls the Phoenix MCP server live and diagnoses it.
+
 ---
 
 ## The Problem
