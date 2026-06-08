@@ -11,7 +11,10 @@ RUN pip install --no-cache-dir -r requirements-phoenix.txt
 COPY adk ./adk
 COPY assets ./assets
 
-ENV PYTHONPATH=/app
+# security: run as non-root (defense in depth)
+RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
+ENV PYTHONPATH=/app HOME=/home/appuser
+USER appuser
 
 # Seed Phoenix, then exit. compose runs this once on startup.
 CMD ["python", "-m", "adk.phoenix_ingest", "--mock", \
