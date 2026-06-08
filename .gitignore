@@ -24,3 +24,9 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# Runtime artifacts (local only)
+.adk_web.log
+.phoenix_server.log
+.phoenix_data/
+**/.adk/

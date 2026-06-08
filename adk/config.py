@@ -1,7 +1,14 @@
-"""Vertex AI 백엔드 + 모델 설정.
+"""Gemini backend + model configuration.
 
-ADK가 Gemini를 Vertex AI를 통해 호출하도록 환경변수를 세팅한다.
-(신청서에 적은 'ADK with Vertex AI' 요건 충족)
+The QualityAnalyst agent is built on Google ADK (which ships under the
+Vertex AI Agent Builder product family) and is powered by Gemini.
+
+Two backends are supported, selected at runtime:
+- **Vertex AI** (when GCP_PROJECT_ID is set) — Gemini runs as a billable
+  Google Cloud product via Vertex.
+- **Google AI Studio (GenAI API)** (default, no project set) — Gemini runs
+  on the free GenAI tier. This is the default so the demo reproduces at zero
+  cost; switch to Vertex by exporting GCP_PROJECT_ID.
 """
 from __future__ import annotations
 
@@ -17,10 +24,12 @@ AGGREGATE_MODEL = os.environ.get("ADK_AGGREGATE_MODEL", "gemini-2.5-flash")
 
 
 def configure_vertex() -> None:
-    """ADK가 Vertex AI 백엔드로 Gemini를 호출하도록 환경변수 설정.
+    """Select the Gemini backend at runtime.
 
-    GCP_PROJECT_ID가 없으면 Vertex 대신 GenAI API 키 모드로 폴백한다
-    (스모크 테스트/모킹 시 프로젝트 없이도 import는 통과하도록).
+    If GCP_PROJECT_ID (or GOOGLE_CLOUD_PROJECT) is set, route Gemini through
+    Vertex AI (a billable Google Cloud product). Otherwise the agent uses the
+    free Google AI Studio GenAI API via GOOGLE_API_KEY — the default, so the
+    demo runs at zero cost without a configured GCP project.
     """
     project = os.environ.get("GCP_PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
     if project:

@@ -23,8 +23,10 @@ This agent turns scattered evaluations into an **observable, diagnosable** syste
    trace: a `CHAIN` span per scene, five `LLM` child spans (one per expert),
    plus per-expert score annotations. **Continuity is also *measured*** —
    deterministic metrics (`subject_consistency` via dHash, `palette_stability`
-   via RGB histogram) are logged beside the expert scores as a separate `CODE`
-   annotation. See [docs/08_CONTINUITY_METRICS.md](docs/08_CONTINUITY_METRICS.md).
+   via RGB histogram) are **computed on real adjacent frames** shipped in
+   [`assets/frames/`](assets/frames) (not hard-coded) and logged beside the
+   expert scores as a separate `CODE` annotation. See
+   [docs/08_CONTINUITY_METRICS.md](docs/08_CONTINUITY_METRICS.md).
 2. **Diagnose** — `QualityAnalyst` (Gemini) connects to Phoenix via the
    **`@arizeai/phoenix-mcp`** server and autonomously queries traces/spans to
    find quality-regression patterns (e.g. *"scene 03 stalls at 6/10 on
@@ -47,8 +49,12 @@ Scene evaluations
         QualityAnalyst (Gemini, Google ADK) ── autonomous query + diagnosis
 ```
 
-- **Google ADK** (`google-adk`) — agent framework, `McpToolset` connects the MCP server
-- **Gemini** — the agent's reasoning backbone (free AI Studio tier)
+- **Google ADK** (`google-adk`) — agent framework. ADK ships as part of
+  [**Vertex AI Agent Builder**](https://cloud.google.com/agent-builder/agent-development-kit/overview);
+  `McpToolset` connects the partner MCP server.
+- **Gemini** (`gemini-2.5-flash`) — the agent's reasoning backbone. Runs on the
+  free Google AI Studio tier by default; set `GCP_PROJECT_ID` to route it
+  through **Vertex AI** instead (see [`adk/config.py`](adk/config.py)).
 - **Arize Phoenix** — LLM observability; **partner MCP integration (required)**
 - **OpenInference** — semantic conventions for spans
 

@@ -30,6 +30,9 @@ from phoenix.otel import SpanAttributes, register
 
 PROJECT_NAME = "ai-novel-quality"
 
+# Repo root (one level above adk/).
+ROOT = Path(__file__).resolve().parent.parent
+
 # 5인 전문가가 담당하는 평가 항목 (rubric.md 와 동일)
 EXPERTS = {
     "Director": ["prompt_adherence", "composition_camera", "emotional_impact"],
@@ -42,16 +45,54 @@ EXPERTS = {
 }
 
 
+# Sample real frames shipped in the repo (resized stills from an actual
+# generated trailer). The deterministic continuity metric is MEASURED on these
+# adjacent frames, not hard-coded — so "subjective score vs measured drift" is
+# a real cross-check, not mock-vs-mock.
+FRAMES_DIR = ROOT / "assets" / "frames"
+SCENE_FRAMES = {
+    "01_grab": "01_ambush.png",
+    "02_reveal": "02_creature.png",
+    "03_cliffhanger": "03_bait.png",
+}
+
+
+def _measured_continuity(scene: str) -> dict:
+    """Measure continuity for a scene vs its predecessor on real frames.
+
+    Uses adk.continuity_metrics on the shipped sample frames. Falls back to an
+    empty dict (graceful) if PIL or the frames are unavailable — the metric is
+    a signal, never a required field. The first scene has no predecessor.
+    """
+    from adk import continuity_metrics
+
+    order = list(SCENE_FRAMES)
+    idx = order.index(scene) if scene in order else -1
+    if idx <= 0:
+        return {}  # first scene (or unknown) has no adjacent predecessor
+    prev_img = FRAMES_DIR / SCENE_FRAMES[order[idx - 1]]
+    curr_img = FRAMES_DIR / SCENE_FRAMES[scene]
+    summary = continuity_metrics.metrics_summary(prev_img, curr_img)
+    return {
+        k: summary[k]
+        for k in ("subject_consistency", "palette_stability")
+        if summary.get(k) is not None
+    }
+
+
 def _mock_evaluations() -> list[dict]:
-    """씬별·iteration별 mock 평가. 점수가 개선되며 오르는 추이를 담는다.
+    """씬별·iteration별 평가. 전문가 점수는 합성(개선 추이)이나,
+    **continuity 지표는 실제 프레임에서 측정**한다 (mock 아님).
 
     한 씬(03_cliffhanger)이 character_consistency에서 반복 정체하는 패턴을
-    의도적으로 심어 QualityAnalyst가 진단할 거리를 만든다.
+    심어 QualityAnalyst가 진단할 거리를 만든다. 측정된 continuity는 그 주관
+    점수와 교차검증 대상이 된다.
     """
     scenes = ["01_grab", "02_reveal", "03_cliffhanger"]
     evals: list[dict] = []
     for scene in scenes:
-        # 씬마다 2~3회 iteration, 점수가 오르는 추이
+        # iteration 간 프레임은 동일하므로 측정값도 동일 (한 번만 계산)
+        measured = _measured_continuity(scene)
         for it in range(1, 4):
             base = 62 + it * 8  # 70 → 78 → 86
             scores = {
@@ -70,18 +111,11 @@ def _mock_evaluations() -> list[dict]:
                 "defect_free": min(10, 8 + it),
             }
             total = base if scene != "03_cliffhanger" else base - 8
-            # Deterministic continuity metrics (computed independently of the
-            # expert panel). 03_cliffhanger drifts below the 0.85 threshold so
-            # the measured signal corroborates the stalled subjective score.
-            continuity = {
-                "subject_consistency": 0.72 if scene == "03_cliffhanger" else round(min(0.97, 0.86 + it * 0.03), 4),
-                "palette_stability": round(min(0.98, 0.88 + it * 0.03), 4),
-            }
             evals.append({
                 "scene_id": scene,
                 "iteration": it,
                 "scores": scores,
-                "continuity": continuity,
+                "continuity": measured,  # MEASURED on real frames (may be {} for scene 1)
                 "total_normalized": float(min(95, total)),
                 "verdict": "PASS" if total >= 85 else "REVISE",
             })
