@@ -263,6 +263,43 @@ def annotate(rows: dict | list[dict], *, endpoint: str) -> int:
     return total
 
 
+DEFECTS_DATASET = "confirmed-defects"
+
+
+def ensure_defects_dataset(*, endpoint: str) -> bool:
+    """Create the 'confirmed-defects' dataset (idempotent) so the QualityAnalyst
+    can *write* its diagnosis back via the phoenix-mcp add-dataset-examples tool.
+
+    add-dataset-examples only appends to an *existing* dataset, so the write-back
+    loop needs this target to exist. Seeded with one baseline example. Returns
+    True if created, False if it already existed / on failure (non-fatal)."""
+    client = Client(base_url=endpoint)
+    try:
+        existing = {d.get("name") for d in client.datasets.list()}
+    except Exception:
+        existing = set()
+    if DEFECTS_DATASET in existing:
+        return False
+    try:
+        client.datasets.create_dataset(
+            name=DEFECTS_DATASET,
+            dataset_description=(
+                "Confirmed quality defects recorded by the QualityAnalyst agent "
+                "(read→diagnose→write loop). Baseline row below; the agent appends "
+                "real findings via add-dataset-examples."
+            ),
+            examples=[{
+                "input": {"scene_id": "_baseline", "dimension": "_init"},
+                "output": {"verdict": "baseline", "note": "dataset initialized"},
+                "metadata": {"source": "seeder"},
+            }],
+        )
+        return True
+    except Exception as exc:  # non-fatal — diagnosis still works without write-back
+        print(f"  (dataset 생성 skip: {exc})")
+        return False
+
+
 def _load_reports(reports_dir: Path) -> list[dict]:
     """실제 평가 리포트 디렉토리에서 평가를 읽는다 (__history.json 활용).
 
@@ -308,6 +345,7 @@ def main() -> int:
     rows = ingest(evals, endpoint=args.endpoint, project_name=args.project)
     time.sleep(2)  # span flush 후 annotation (span이 먼저 존재해야 함)
     n = annotate(rows, endpoint=args.endpoint)
+    ensure_defects_dataset(endpoint=args.endpoint)
     print(f"✅ 적재 완료: {len(evals)}개 평가 → span, {n}개 annotation "
           f"(expert_score + continuity_metric) "
           f"(project={args.project}, endpoint={args.endpoint})")
